@@ -1,0 +1,162 @@
+//a global function that drew different types of SVG buttons: 1) buttons with text, 2) buttons with icons, and 3) buttons with icons and text
+
+GLOBAL.drawButton = function(_drawable, _domElem, _obscure, _pos, _fn_permission, _fn_click, _buttonAttrs) {
+
+    _domElem = un$(_domElem);
+
+    if( _fn_permission() === false ) {
+        return d3.select(_domElem).append('svg:g'); // return a dummy here
+    }
+
+    //default attributes
+    var width = _buttonAttrs.width ? _buttonAttrs.width : 18;
+    var height = 19;
+    var X_PADDING = 6;
+    var Y_PADDING = 3;
+    var adjustedWidth;
+
+    //optional attributes
+    var text = _buttonAttrs.text;
+    var icon = _buttonAttrs.icon;
+    var iBecomeBusy = _buttonAttrs.iBecomeBusy;     //true if button should be marked busy when drawable is busy
+    var classmark = _buttonAttrs.classmark;
+    var id = _buttonAttrs.id;
+    var disabled = _buttonAttrs.disabled;
+
+    //calculations
+    var textSize = getTextSize(10.5, text);
+    var iconWidth = Math.floor(width * 0.7);
+    var iconHeight = Math.floor(height * 0.7);
+
+    //button drawing
+    var buttonGroup = d3.select(_domElem).append('svg:g')
+        .attr('transform', translate(_pos.x, _pos.y) )
+        .classed('svg_button', true)
+        .classed('global_disabled', disabledButtons() )
+        .classed('disabled', disabled )
+        .attr('classmark', classmark)
+        .attr('id', id)
+        ;
+    //button shadow
+    buttonGroup.append('svg:rect')
+        .attr('rx', 3)
+        .attr('ry', 3)
+        .attr('width', width)
+        .attr('height', height + 1.5)
+        .attr('class', 'button_shadow')
+        ;
+    //button
+    buttonGroup.append('svg:rect')
+        .attr('rx', 2)
+        .attr('ry', 2)
+        .attr('width', width)
+        .attr('height', height)
+        .attr('class', 'button svg-button')
+        ;
+
+    var button = buttonGroup.select('.button');
+    var buttonShadow = buttonGroup.select('.button_shadow');
+    var buttonText = buttonGroup.select('.buttonText');
+
+    if( text && icon ) {
+        //previously drawIconAndTextButton
+
+        if( !( _drawable.isBusy && iBecomeBusy ) ) {
+            //icon
+            buttonGroup.append('svg:image')
+                .attr('x', Math.floor( ( width - iconWidth )/2 ) )
+                .attr('y', Math.floor( ( height - iconHeight )/2 ) )
+                .attr('width', iconWidth)
+                .attr('height', iconHeight)
+                .attr('xlink:href', icon)
+                .attr('class', 'svg_button_icon')
+                ;
+
+            //text
+            buttonGroup.append('svg:text')
+                .attr('x', 18) //account for width of icon
+                .attr('y', textSize.y - 3 + (parseInt(button.attr('height'), 10)/ 3) )
+                .text(text)
+                .classed('font_size_10 buttonText', true)
+                ;
+        }
+
+        //adjust width of button and buttonShadow to text
+        if( !_buttonAttrs.width ) {
+            adjustedWidth = parseInt(button.attr('width'), 10) + textSize.x + 4;   //in right place?
+            button.attr('width', adjustedWidth);
+            buttonShadow.attr('width', adjustedWidth);
+            buttonText.attr('x', adjustedWidth/2).attr('text-anchor', 'middle');
+        }
+
+    } else if( icon ) {
+        //previously drawIconButton
+
+        if( !( _drawable.isBusy && iBecomeBusy ) ) {
+            //icon
+            buttonGroup.append('svg:image')
+                .attr('x', Math.floor( ( width - iconWidth )/2 ) )
+                .attr('y', Math.floor( ( height - iconHeight )/2 ) )
+                .attr('width', iconWidth)
+                .attr('height', iconHeight)
+                .attr('xlink:href', icon)
+                .attr('class', 'svg_button_icon')
+                ;
+        }
+
+    } else if( text ) {
+        //previously drawTextButton
+
+        if( !( _drawable.isBusy && iBecomeBusy ) ) {
+            //text
+            buttonGroup.append('svg:text')
+                .attr('x', _buttonAttrs.width ? width/2 : X_PADDING )
+                .attr('y', Y_PADDING + textSize.y)
+                .text(text)
+                .classed('font_size_10 buttonText', true)
+                ;
+        }
+
+        if( !_buttonAttrs.width ) {
+            //adjust width of button and buttonShadow to text
+            adjustedWidth = X_PADDING + textSize.x + X_PADDING - 2;
+            button.attr('width', adjustedWidth);
+            buttonShadow.attr('width', adjustedWidth);
+        }
+
+    } else {
+        //error
+        netsocketLog('error', 'Invalid button declaration.');
+    }
+
+    //if busy
+    if( ( _drawable.isBusy && iBecomeBusy ) ) {
+        //if busy
+        var buttonBusyWidth = adjustedWidth ? adjustedWidth : width;
+        buttonGroup.append('svg:image')
+            .attr('x', buttonBusyWidth/2 - width/2)
+            .attr('y', 1)
+            .attr('width', width)
+            .attr('height', height - 2)
+            .attr('xlink:href', '/static/world-in-svg/img/world/ns-loading.svg')
+            ;
+        return buttonGroup;
+    }
+
+    //click function
+    if ( !_.isNull( _fn_click ) && !( _drawable.isBusy && iBecomeBusy ) ) {
+        buttonGroup.on('click', function() {
+            d3.event.stopPropagation();
+            addToSelection(_drawable, true);
+            if ( d3.select(this).classed('disabled') || d3.select(this).classed('global_disabled') ) {
+                return void 0;
+            } else {
+                //pass in reference to the <g> element
+                _fn_click.call(this,_drawable);
+            }
+
+        });
+    }
+
+    return buttonGroup;
+};
