@@ -1,4 +1,4 @@
-//A global function that drew different types of SVG buttons: 1) buttons with text, 2) buttons with icons, and 3) buttons with icons and text
+//*A global function that drew different types of SVG buttons: 1) buttons with text, 2) buttons with icons, and 3) buttons with icons and text
 
 GLOBAL.drawButton = function(_drawable, _domElem, _obscure, _pos, _fn_permission, _fn_click, _buttonAttrs) {
 
