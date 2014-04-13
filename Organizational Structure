@@ -1,0 +1,50 @@
+//This is just a snippet of a file I spent some time in at Netsocket.
+  This was our organizational structure (similar to HTML) for drawing our SVG objects on the screen.
+
+  Overview of parameters:
+  - The first parameter is a function that determines how many, if any, of the element to draw.
+  - The second is the name of the element to draw.
+  - Size(): Size of element.
+  Optional parameters, in no particular order:
+  - SELECTABLE: Whether the element was able to be selected or not.
+  - Alignment(): How to align the element within its parent, similar to CSS positioning.
+  - Margin(): Same as in CSS.
+  - Padding(): Same as in CSS.
+  = RevealingObscurity(): When to display element, depending on zoom level in GUI.
+
+  Layout options:
+  - horizontalLayout: Align children horizontally.
+  - verticalLayout: Align children vertically.
+  - overlayLayout: Lay out children on top of one another.
+
+
+
+[ iPopulate.defSiteInterfaces, Drawable.d_site_interfaces, SELECTABLE, Alignment(FILL_X_INSIDE, NO_ALIGNMENT), Padding(0,50,50,0), Size(MIN,function(_drw){ return Math.max(SET_HEIGHT,(iSet.getListOfAllNames(_drw).length * SET_HEIGHT) + PIPELINE_HEADER_PAD * 3); }),
+  horizontalLayout([
+    ONE, Drawable.d_box, Alignment(NO_ALIGNMENT, FILL_Y_INSIDE), Padding(0,0,0,50),
+      verticalLayout([
+        [ ONE, Drawable.d_switch_group, RevealingObscurity(OBSCURITY_LOW), SELECTABLE, Alignment(FILL_X_INSIDE, NO_ALIGNMENT), Size(MIN),
+          horizontalLayout([
+            [ iInterface.defSwitchColumn, Drawable.d_switch_col, Size(INTERFACE_WIDTH,150),
+              verticalLayout([
+                [ iInterface.defUnprovisionedInterfacesInOffice, Drawable.d_interface_unassigned, SELECTABLE, Size(INTERFACE_WIDTH,45), Margin(0,100,0,0) ]
+              ])
+            ]
+        ])
+],
+[ iSet.defSets, Drawable.d_office_set, RevealingObscurity(OBSCURITY_LOW), SELECTABLE, Alignment(FILL_X_INSIDE, NO_ALIGNMENT), Size(MIN,SET_HEIGHT), Padding(0,52,0,0),
+  horizontalLayout([
+    [ iInterface.defInterfacesInOffice, Drawable.d_interfaceCol, Size(INTERFACE_WIDTH,INTERFACE_HEIGHT+58),
+      verticalLayout([
+        [ iInterface.defInterfaceInColumn, Drawable.d_interface, SELECTABLE, Size(INTERFACE_WIDTH,INTERFACE_HEIGHT+58),
+          overlayLayout([
+            [ ONE, Drawable.d_usage_stats, Alignment(LEFT, TOP_OUTSIDE), Size(INTERFACE_WIDTH,INTERFACE_HEIGHT+58) ],
+            [ ONE, Drawable.d_flowBlock, Size(85,50) ],
+            [ ONE, Drawable.d_interfaceContent, Size(INTERFACE_WIDTH, INTERFACE_HEIGHT+58)],
+            [ SINGLE( { 'markedConnection':false, 'markedRoute':false } ), Drawable.d_action_buttons, Size(90,100), Margin(50,135,0,0) ]
+          ])
+        ]
+      ])
+    ]
+  ])
+]
