@@ -1,0 +1,14 @@
+//*Tired of navigating to sites that would find the color in between two colors, I created a convenient way to find the desired color.
+.matrix_cell_curve {
+    fill: hsl( ( hue($input) + hue($output) ) / 2, 50%, 50%);
+}
+
+Of course if you want to use this in multiple places, it might be easier to create a mixin, like so:
+
+@mixin middle-color($color1, $color2) {
+  fill: hsl( ( hue($color1) + hue($color2) ) / 2, 50%, 50%);
+}
+
+.matrix_cell_curve {
+    fill: middle-color($input, $output);
+}
