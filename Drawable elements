@@ -1,0 +1,285 @@
+//*We used D3 to draw our SVG elements.
+  This is an example of how elements are drawn.
+  'Obscurity' is referenced throughtout the function and refers to the zoom level in the GUI. Certain information is available at certain zoom levels.
+
+
+
+Drawable.createType( 'd_interfaceContent', function( _drawable, _domElem, _obscure ) {
+
+    //*Information needed to draw element's contents.
+    var interfaceData            = iInterface.get(_drawable);
+    var mySetName                = _drawable.getParameter('pipelineSet');
+    var interfaceName            = _drawable.getParameter('interfaceName');
+    var isDHCP                   = interfaceData.getDHCPclientIsConfigured();
+    var sharesWAN                = interfaceData.sharesWAN();
+    var isPrimary                = interfaceData.isPrimaryInternet();
+    var isLocal                  = interfaceData.isLocalInternet();
+    var interfaceDHCPdata        = interfaceData.getDHCPClient();
+    var _centerY                 = _drawable.box.height/2;
+    var _centerX                 = _drawable.box.width/2;
+    var description              = interfaceData.getInfo('desc');
+    var isBlocked                = interfaceData.getInfo('flowBlock');
+    var bandwidth                = getBandwidthDisplayString(iInterface.getInterfaceConfig(_drawable).bandwidth);
+    var interfaceLabelLeftMargin = 45;
+
+    //context info icon
+    d3.select(_domElem).append( 'svg:image' )
+        .attr('xlink:href', '/static/img/router/tooltip.svg')
+        .attr('x', 10)
+        .attr('y', 130)
+        .attr('width', 20)
+        .attr('height', 20)
+        .attr('title', htmlContextOf(_drawable) )
+        ;
+
+    //append text to this group in order to more easily move it around
+    var textGroup = un$( d3.select(_domElem).append('svg:g')
+        .attr('transform', 'translate(0,40)')
+        );
+
+    //text shown at obscurity 0
+    if ( _obscure < 1 ) {
+
+        if( isPrimary ) {
+            //Primary label
+            d3.select(textGroup).append( 'svg:text' )
+                .attr('x', interfaceLabelLeftMargin)
+                .attr('y', INTERFACE_HEIGHT/2 + 115)
+                .text('Primary')
+                .attr('class', 'font_size_36 text_light_blue' )
+                ;
+        } else if( isLocal ) {
+            //Shortcut label
+            d3.select(textGroup).append( 'svg:text' )
+                .attr('x', interfaceLabelLeftMargin)
+                .attr('y', INTERFACE_HEIGHT/2 + 115)
+                .text('Bypass')
+                .attr('class', 'font_size_24 text_light_blue' )
+                ;
+        }
+
+        //*If interface has 'DHCP' option enabled...
+        if(isDHCP) {
+            //DHCP label
+            d3.select(textGroup).append( 'svg:text' )
+                .attr('x', interfaceLabelLeftMargin)
+                .attr('y', INTERFACE_HEIGHT/2 + 15)
+                .text('DHCP')
+                .attr('class', 'font_size_24 text_dark_gray' )
+                ;
+
+            //DHCP info icon
+            var leasedIp = _drawable.stats('ipAddress') || 'Waiting...';
+
+            var titleContent = '<dl>' +
+                                '<div><dt>Leased IP</dt><dd>' + leasedIp + '</dd></div>' +
+                              '</dl>';
+
+            d3.select(textGroup).append( 'svg:image' )
+                .attr('x', interfaceLabelLeftMargin + 70)
+                .attr('y', INTERFACE_HEIGHT/2)
+                .attr('width', 15)
+                .attr('height', 15)
+                .attr('xlink:href', '/static/img/router/tooltip.svg')
+                .attr('title', titleContent)
+                .attr('class', 'displayDhcpTooltip')
+                ;
+
+        } else if( sharesWAN ) {
+
+            //WAN label
+            d3.select(textGroup).append( 'svg:text' )
+                .attr('x', interfaceLabelLeftMargin)
+                .attr('y', INTERFACE_HEIGHT/2 + 15)
+                .text('Sharing WAN')
+                .attr('class', 'font_size_24 text_dark_gray' )
+                ;
+
+        }
+        else
+        {
+            //warn if IP address doesn't match type expected for this policy
+            var policyType          = mySetName.split('__')[0];
+            var expectedAddressType = iSet.getAddressType(policyType);
+            var ipAddr              = interfaceData.getInfo('ipAddr');
+            var ipAddrNoZeros       = ipAddr.split('.').map(Number).join('.');     //remove leading zeros - instead of 5.006.008.021 -> 5.6.8.21
+            var subnet              = getSubnetDisplayString( ipAddrNoZeros, interfaceData.getInfo('netmask') );
+
+            if(expectedAddressType == 'private' && !isPrivateIP(subnet) || expectedAddressType == 'public' && isPrivateIP(subnet))
+            {
+                var warning = expectedAddressType == 'private' ?
+                                'IP subnet is public, while for the policy type ' + policyType + ' a private subnet is expected' :
+                                'IP subnet is private, while for the policy type ' + policyType + ' a public subnet is expected';
+
+                var warningGroup = un$( d3.select(textGroup).append('svg:g')
+                    .attr('transform', 'translate(' + ( interfaceLabelLeftMargin + 80 ) + ', 180)')
+                    );
+                    
+                drawSvgWarningMessage( _domElem,
+                    interfaceLabelLeftMargin,     //x
+                    180,                          //y
+                    77,                           //width
+                    warning,                      //tooltip
+                    'Not ' + expectedAddressType  //_line1
+                );
+                
+                //info icon
+                d3.select(warningGroup).append( 'svg:image' )
+                    .attr('y', 2)
+                    .attr('width', 10)
+                    .attr('height', 10)
+                    .attr('xlink:href', '/static/img/router/tooltip.svg')
+                    .attr('title', "#private_ip_ranges")
+                    ;
+            }
+
+        }
+
+    }
+
+    //*At the most zoomed in level, show this information...
+    //obscurity 0
+    if( _obscure < 1 ) {
+
+        d3.select(_domElem).classed( interfaceData.getNATtypeClass(), true );
+
+        if( description ) {
+            //info icon for description
+            d3.select(_domElem).append( 'svg:image' )
+                .attr('x', _drawable.box.width - 25)
+                .attr('y', 160)
+                .attr('width', 15)
+                .attr('height', 15)
+                .attr('xlink:href', '/static/img/router/tooltip.svg')
+                .attr('title', description)
+                ;
+        }
+
+        //buttons
+
+        //action button function
+        var fn_actionButtons = function() {
+            var otherButtonsGroup = un$(d3.select(_domElem.parentElement).selectAll('.otherButtonsGroup'));
+
+            if( d3.select(otherButtonsGroup).attr('display') == 'block' ) {
+                d3.select(otherButtonsGroup).attr('display', 'none');
+            }
+            else {
+                //close any open dialogs in other interfaces
+                d3.select(otherButtonsGroup).attr('display', 'none');
+                //open the dialog user clicked to open
+                d3.select(otherButtonsGroup).attr('display', 'block');
+            }
+        };
+
+        //delete button function
+        var deconfig_function  = function(_drawable) {
+        var deprovisionMessage = '<div class="alert-ns"><p>Are you sure you want to deprovision ' + interfaceName + '?</p></div>';
+        var deprovisionTitle   = 'Deprovision Confirmation';
+            
+        if(iSet.get(_drawable).interfaceList().length == 1 ) {
+                deprovisionMessage = '<div class="alert-ns"><p>Deprovisioning this interface will result in the loss of all configuration of this policy.</p><p>Continue?</p></div>';
+                deprovisionTitle   = 'Last Interface In Policy';
+            } else if( _.isBlank( _drawable.getParameter('parent_host_id') ) ) {
+                //interface is in super site
+                var installation_id           = _drawable.getParameter('installation_id');
+                var host_id                   = _drawable.getParameter('host_id');
+                var myComponent               = iVNC.getComponentOfHost( installation_id, host_id );
+                var subsiteClass              = myComponent.params && myComponent.params.subsiteClass;
+                var lastNumberInInterfaceName = interfaceName.split('/')[2];
+                var relatedInterfaceNames     = iInterface.getRelatedSubsiteInterfaceNames(_drawable);
+                var provisionedInterfaceNames = iInterface.getListOfAllProvisionedNames(_drawable.getParameter('installation_id'));
+                var interfacesToDeprovision   = _.intersection(relatedInterfaceNames, provisionedInterfaceNames);
+
+                if(!_.isEmpty(interfacesToDeprovision))
+                {
+                    deprovisionMessage = '<div class="alert-ns"><p>Deprovisioning this interface will result in the deprovisioning of all subsite interfaces related to this interface ( ' + interfacesToDeprovision.join(', ') + ' ).</p><p>Continue?</p></div>';
+                    deprovisionTitle   = 'Multiple Interface Deprovision Confirmation';
+                }
+            }
+
+            nConfirm(deprovisionMessage, function() {
+                if( iInterface.get(_drawable).getDHCPclientIsConfigured() )
+                    deconfigureInterfaceDHCPclient(_drawable);
+                else
+                    deprovisionInterface(_drawable);
+            }, {'cancel': 'No', 'ok': 'Yes', 'title': deprovisionTitle, 'width': '400px'},
+            '#' + $$(_drawable).closest('@d_interface').singular().uid );
+        };
+
+        //edit button function
+        var edit_function = provisionInterface;
+        if( getInterfaceNumberFromName(interfaceName) == '0' && versionManagement.routerApiVersionCheck('LOCAL_INTERNET', 'excludes') )
+            edit_function = provisionWANinterface;
+
+
+        var buttonScale = 1.25;
+        var classmark_actions = 0;
+        var classmark_edit    = 1;
+        
+        var buttons = [
+            //actions
+            {
+                fn_click: fn_actionButtons,
+                image: '/static/img/router/support.svg',
+                iBecomeBusy: false,
+                classed: {support_tool_btn: true, disabled: !userRole.checkPermission(classmark_actions)},
+                scale: buttonScale,
+                title: 'Access interface tools',
+                attrs: {id: 'runInterface_' + _drawable.id, classmark: classmark_actions}
+            },
+
+            //move
+            {
+                fn_click: openMoveInterfaceSetDialog,
+                image: '/static/img/router/move.svg',
+                iBecomeBusy: false,
+                classed: {disabled: !userRole.checkPermission(classmark_edit)},
+                scale: buttonScale,
+                title: 'Move the interface',
+                attrs: {id: 'moveInterface_' + _drawable.id, classmark: classmark_edit}
+            },
+
+            //edit
+            {
+                fn_click: edit_function,
+                image: '/static/world-in-svg/img/world/edit-white.svg',
+                iBecomeBusy: false,
+                classed: {disabled: !userRole.checkPermission(classmark_edit)},
+                scale: buttonScale,
+                title: 'Edit the interface',
+                attrs: {id: 'editInterface_' + _drawable.id, classmark: classmark_edit}
+            },
+
+            //delete
+            {
+                fn_click: deconfig_function,
+                image: '/static/world-in-svg/img/world/trashcan-white.svg',
+                iBecomeBusy: false,
+                classed: {disabled: !userRole.checkPermission(classmark_edit)},
+                scale: buttonScale,
+                title: 'Deprovision the interface',
+                attrs: {id: 'deprovisionInterface_' + _drawable.id, classmark: classmark_edit}
+            }
+        ];
+        drawTextButtonGroup(_drawable, _domElem, _obscure, point(_drawable.box.width - 107, 129), buttons, point(25,0), 18);
+
+        //bandwidth
+        d3.select(_domElem).append( 'svg:text' )
+            .attr('x', INTERFACE_WIDTH/2 + 15)
+            .text(bandwidth)
+            .attr('class', 'font_size_10 text_gray' )
+            ;
+
+        if( isDHCP ) {
+            // draw the renew and release function button
+            drawButton(_drawable, _domElem, _obscure,
+                point(INTERFACE_WIDTH/2 - 5,INTERFACE_HEIGHT/2 - 2),
+                userRole.check(classmark_edit),
+                fn_interfaceDHCPserverRenewRelease,
+                { classmark: classmark_edit, iBecomeBusy: true, id: 'renewDHCPLease_' + _drawable.id, text: 'Renew' })
+                .classed('support_tool_btn', true)
+                ;
+        }
+    }
+} );
