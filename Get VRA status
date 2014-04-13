@@ -1,0 +1,59 @@
+//*A global function that retrieved the status of one of Netsocket's proprietary software-defined network components.
+  Status can be STAGED, ACTIVATED, DOWN, or UP.
+
+
+
+GLOBAL.getVraStatus = function( _drawable ) {
+
+    //*Because each site has this vRA component, and the user can have multiple sites, it's important to first identify which vRA we want the status of.
+    var hostId           = _drawable.getParameter('host_id');
+    var thisHost         = iVNC.host[ hostId ];
+    var hostStatus       = thisHost.popup_status;
+    var thisInstallation = _drawable.getParameter('installation_id');
+
+    //*This object holds the information pertaining to the vRA status.
+    var vraStatus = {
+        statClass: '',
+        statDescription: '',
+        statHelp: '',
+        tooltipHtml: '<div class="led-tooltip-complex">'+
+            '<p><span class="badge badge-success-ns">&nbsp;</span>vRA is reachable and running normally.</p>'+
+            '<p><span class="badge badge-warning-ns">&nbsp;</span>vRA is waiting.</p>'+
+            '<p><span class="badge badge-error-ns">&nbsp;</span>vRA is unreachable.</p>'+
+        '</div>'
+    };
+
+    // show a state where the vRA has yet to be installed
+    // and the user needs the key and executable to install a vRA
+    if ( hostStatus == 'STAGED') {
+        vraStatus.statClass = 'status-warning';
+        vraStatus.statDescription = 'Awaiting installation...';
+        // statHelp = 'Next step is to download and install the vRA on the target machine.';
+    }
+
+    else if ( hostStatus == 'ACTIVATED') {
+        vraStatus.statClass = 'status-warning';
+        vraStatus.statDescription = 'Connecting\u2026';
+        // statHelp = 'If this state persists, then the vRA may need to be rebooted or reconnected to the internet.';
+    }
+
+    else if ( hostStatus == 'DOWN') {
+        vraStatus.statClass = 'status-error';
+        vraStatus.statDescription = 'Communications lost';
+        // statHelp = 'The vRA may need to be rebooted or reconnected to the internet.';
+    }
+
+    else if ( hostStatus == 'UP') {
+        vraStatus.statClass = 'status-success';
+        vraStatus.statDescription = 'Up';
+        // statHelp = '';
+    }
+
+    else if ( hostStatus != 'UP' && hostStatus ) {
+        vraStatus.statClass = 'status-error';
+        vraStatus.statDescription = '??? Unknown state: ' + thisHost.popup_status;
+        // statHelp = 'Call your System Admistrator.';
+    }
+
+    return vraStatus;
+};
