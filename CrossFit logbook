@@ -1,0 +1,136 @@
+//*As a side project, I started creating a logbook web app to keep track of my CrossFit training.
+  *This code is a work in a progress!* It is extremely simple at the moment, and the design and UI leaves much to be desired...!
+  I used HTML5 localStorage because I wanted to try it out, however I plan to revise this in the future,
+  so that a user can access their logbook from devices besides the one they used to originally input the info.
+  At the moment it outputs a very simple page that has an add button. When clicked, it creates a new entry, where you can input info about your workout.
+  When an entry is clicked on, the section uses a CSS animation to "flip" around like a card to show detailed info on the other side.
+
+
+$(document).ready(function(){
+
+	function flip(_this) {
+	  //flip entry around to show detailed info
+		$('.flip-container', _this).click(function(){
+			$(this).toggleClass('flip');
+		});
+		$('input, textarea', _this).click(function(e){
+			e.stopImmediatePropagation();
+		});
+	}
+	
+	function textareaAdjust() {
+		this.style.height = '1px';
+		this.style.height = this.scrollHeight + 'px';
+	}
+	
+	function inputAdjust() {
+		this.style.width = '1px';
+		this.style.width = this.scrollWidth + 'px';
+	}
+	
+	function blankWOD() {
+		//new wod entry
+		var day = document.createElement('div');
+		day.innerHTML = '<div class="flip-container day" ontouchstart="this.classList.toggle("hover");">' +
+							'<div class="flipper">' +
+								'<div class="front day-cover">' +
+									'<section class="date">			<input id="date" type="text">				</section>' +
+									'<section class="description">	<textarea id="description" ></textarea>		</section>' +
+									'<section class="performance">	<textarea id="performance"></textarea>		</section>' +
+								'</div>' +
+								'<div class="back">' +
+									'<div class="row"><span>Class time</span><input type="text" id="water"></div>' +
+									'<div class="row"><span>Sleep</span><input type="text" id="sleep"></div>' +
+									'<div class="row"><span>Mobility</span><input type="text" id="mobility"></div>' +
+									'<div class="row"><span>Nutrition</span><input type="text" id="cheats"></div>' +
+									'<div class="row"><span>Water</span><input type="text" id="water"></div>' +
+									'<div class="row"><span>Notes</span><input type="text" id="notes"></div>' +
+								'</div>' +
+							'</div>' +
+						'</div>' +
+					'</div>';
+
+		return day;
+	}
+	
+	function addWODTemplate() {
+		//append new wod to page
+		var $wod = blankWOD();		//save blank day template to var
+		$('#wods').prepend($wod);	//add blank entry to top of page
+
+		return $wod;
+	}
+	
+	function insertExistingData(_wod, _$wod) {
+		//put default or saved values into html
+		for ( var key in _wod ) {		//define key var whose value is a key in the wod object
+			var value = _wod[key];		//assign each key's value to a var
+
+			$('#' + key, _$wod).val(value);	//insert the key values into the html element with the same id as the key
+			$('#' + key, _$wod).height(document.getElementById(key).scrollHeight + 'px');	//make textarea display all content without scroll
+			// $('#' + key, _$wod).width(document.getElementById(key).scrollWidth + 'px');		//make input display all content without scroll
+		}
+	}
+	
+	function addWodToPage(_wod) {
+		//add blank wod entry
+		var $wod = addWODTemplate();
+
+		if( _wod.date !== '' )
+			//insert existing data into html
+			insertExistingData(_wod, $wod);
+
+		$('input, textarea', $wod).change(function(){
+			var inputId = $(this).prop('id');						//get id of input field
+			var inputVal = $(this).val();							//get value of input field
+			_wod[inputId] = inputVal;								//save input value to wod object
+			var date = moment(_wod.date).format('YYYY.MM.DD');
+			localStorage.setItem(date, JSON.stringify(_wod));		//save wod object to day
+		});
+
+		//bind flip to new wods
+		flip($wod);
+	}
+	
+	function addExistingWodsToPage() {
+		var numberOfExistingWODs = localStorage.length;
+		
+		if( numberOfExistingWODs ) {
+			for ( var i = 0; i < numberOfExistingWODs; i++ ) {
+				var wodString = localStorage.getItem(localStorage.key(i));
+				wod = JSON.parse(wodString);
+				
+				addWodToPage(wod);
+			}
+		}
+	}
+
+	addExistingWodsToPage();
+	
+	//adjust textarea height to display all content
+	var textarea = $('.day').find('textarea');
+	textarea.each(function(){
+		$(this).keyup( textareaAdjust );
+	});
+
+	//adjust input width to display all content
+	var input = $('.day').find('input');
+	input.keyup( inputAdjust.bind( input.get(0) ) );
+
+	//remove input styling if field has value
+	$('input, textarea').each(function(){
+		if( $(this).val() !== '' )
+			$(this).addClass('remove-styling');
+	});
+
+	//add new wod on button click
+	$('button').click(function(){
+		var today = moment();
+		var wod = {
+			'date': today.format('YYYY.MM.DD'),
+			'description': ''
+		};
+		addWodToPage(wod);
+	});
+
+});
