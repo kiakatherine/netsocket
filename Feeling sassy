@@ -1,4 +1,7 @@
-//*Tired of navigating to sites that would find the color in between two colors, I created a convenient way to find the desired color.
+//*A convenient way to find a color that's halfway between two colors.
+
+
+
 .matrix_cell_curve {
     fill: hsl( ( hue($input) + hue($output) ) / 2, 50%, 50%);
 }
